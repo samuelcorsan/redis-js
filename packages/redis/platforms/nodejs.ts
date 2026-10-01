@@ -141,6 +141,7 @@ export class Redis extends core.Redis {
       agent: configOrRequester.agent,
       responseEncoding: configOrRequester.responseEncoding,
       cache: configOrRequester.cache ?? "no-store",
+      redirect: configOrRequester.redirect,
       signal: configOrRequester.signal,
       keepAlive: configOrRequester.keepAlive,
       readYourWrites: configOrRequester.readYourWrites,

@@ -1,4 +1,6 @@
 import { describe, test, expect } from "bun:test";
+import { Redis as CloudflareRedis } from "../platforms/cloudflare";
+import { Redis as FastlyRedis } from "../platforms/fastly";
 import { Redis } from "../platforms/nodejs";
 import { serve } from "bun";
 import { UpstashJSONParseError } from "./error";
@@ -177,6 +179,85 @@ describe("http", () => {
       server.stop(true);
     }
   });
+
+  for (const status of [307, 308]) {
+    test(`passes Fetch redirect policy through each platform for HTTP ${status}`, async () => {
+      const originBodies: unknown[] = [];
+      const receivedBodies: unknown[] = [];
+      const destination = serve({
+        port: 0,
+        async fetch(request) {
+          receivedBodies.push(await request.json());
+          return Response.json({ result: '"redirected"' });
+        },
+      });
+      const origin = serve({
+        port: 0,
+        async fetch(request) {
+          originBodies.push(await request.json());
+          return new Response(null, {
+            status,
+            headers: { location: destination.url.toString() },
+          });
+        },
+      });
+
+      const url = origin.url.toString();
+      const clients = [
+        {
+          name: "nodejs",
+          create: (redirect?: RequestInit["redirect"]) =>
+            new Redis({
+              url,
+              token: "test-token",
+              redirect,
+              retry: false,
+              enableAutoPipelining: false,
+            }),
+        },
+        {
+          name: "cloudflare",
+          create: (redirect?: RequestInit["redirect"]) =>
+            new CloudflareRedis({
+              url,
+              token: "test-token",
+              redirect,
+              retry: false,
+              enableAutoPipelining: false,
+            }),
+        },
+        {
+          name: "fastly",
+          create: (redirect?: RequestInit["redirect"]) =>
+            new FastlyRedis({
+              url,
+              token: "test-token",
+              backend: "test-backend",
+              redirect,
+              retry: false,
+              enableAutoPipelining: false,
+            }),
+        },
+      ];
+
+      try {
+        for (const { name, create } of clients) {
+          const before = receivedBodies.length;
+          await expect(create().get(`${name}-default`)).resolves.toBe("redirected");
+          expect(originBodies.at(-1)).toEqual(["get", `${name}-default`]);
+          expect(receivedBodies).toHaveLength(before + 1);
+          expect(receivedBodies.at(-1)).toEqual(["get", `${name}-default`]);
+
+          await expect(create("error").get(`${name}-error`)).rejects.toThrow();
+          expect(originBodies.at(-1)).toEqual(["get", `${name}-error`]);
+          expect(receivedBodies).toHaveLength(before + 1);
+        }
+      } finally {
+        origin.stop(true);
+        destination.stop(true);
+      }
+    });
+  }
 
   test("should handle streaming data split across two chunks", async () => {
     const receivedMessages: string[] = [];

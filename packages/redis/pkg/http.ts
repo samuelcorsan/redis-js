@@ -86,6 +86,12 @@ export type Options = {
 
 export type RequesterConfig = {
   /**
+   * Configure how Fetch handles HTTP redirects. By default, Fetch follows redirects.
+   * Set to "error" to reject a redirected request.
+   */
+  redirect?: RequestInit["redirect"];
+
+  /**
    * Configure the retry behaviour in case of network errors
    */
   retry?: RetryConfig;
@@ -146,6 +152,7 @@ export class HttpClient implements Requester {
     signal?: HttpClientConfig["signal"];
     responseEncoding?: false | "base64";
     cache?: CacheSetting;
+    redirect?: RequestInit["redirect"];
     keepAlive: boolean;
   };
   public readYourWrites: boolean;
@@ -163,6 +170,7 @@ export class HttpClient implements Requester {
       agent: config.agent,
       responseEncoding: config.responseEncoding ?? "base64", // default to base64
       cache: config.cache,
+      redirect: config.redirect,
       signal: config.signal,
       keepAlive: config.keepAlive ?? true,
     };
@@ -236,6 +244,7 @@ export class HttpClient implements Requester {
 
     const requestOptions: RequestInit & { backend?: string; agent?: any } = {
       cache: this.options.cache,
+      redirect: this.options.redirect,
       method: "POST",
       headers: requestHeaders,
       body: JSON.stringify(req.body),

@@ -86,6 +86,21 @@ data  = await redis.spop('animals', 1)
 console.log(data)
 ```
 
+## Redirect handling
+
+To reject HTTP redirects when making Redis requests, set the Fetch `redirect` option to
+`"error"`. If omitted, Fetch follows redirects as usual.
+
+```ts
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  redirect: "error",
+});
+```
+
 ## Troubleshooting
 
 We have a

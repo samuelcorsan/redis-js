@@ -83,6 +83,7 @@ export class Redis extends core.Redis {
       baseUrl: config.url!,
       headers: { authorization: `Bearer ${config.token}` },
       responseEncoding: config.responseEncoding,
+      redirect: config.redirect,
       signal: config.signal,
       keepAlive: config.keepAlive,
       readYourWrites: config.readYourWrites,
